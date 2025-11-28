@@ -1,0 +1,32 @@
+[package]
+name = "crabstitch"
+version = "0.1.2"
+description = "A Tauri based Rust port of SmartStitch"
+authors = ["athk"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "crabstitch_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2.0.0", features = [] }
+tauri-plugin-dialog = "2.0.0"
+tauri-plugin-shell = "2.0.0"
+tauri-plugin-notification = { version = "2.0.0", features = [ "windows7-compat" ] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+# image 0.24 is stable and widely used, 0.25 has API changes. Using 0.24 for stability here.
+image = "0.24" 
+natord = "1.0.9" # For "1.jpg, 2.jpg, 10.jpg" sorting
+walkdir = "2.4"
+rayon = "1.8" # Parallel processing
+anyhow = "1.0"
