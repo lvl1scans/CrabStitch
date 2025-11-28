@@ -1,6 +1,6 @@
 [package]
 name = "crabstitch"
-version = "0.1.2"
+version = "0.1.3"
 description = "A Tauri based Rust port of SmartStitch"
 authors = ["athk"]
 edition = "2021"
