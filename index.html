@@ -3,114 +3,246 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CrabStitch</title>
+  <title>CrabStitch v0.2.0</title>
   <style>
-    /* ... (STYLES REMAIN THE SAME) ... */
-    :root { --primary: #2ecc71; --bg: #ffffff; --text: #333; --border: #ddd; }
-    body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background: #f4f4f4; color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    :root { --primary: #2ecc71; --bg: #f8f9fa; --text: #333; --border: #ddd; }
+    body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    
+    /* TABS */
     .tabs { flex: 0 0 auto; display: flex; background: #fff; padding: 10px 20px 0; border-bottom: 1px solid var(--border); }
-    .tab { padding: 10px 20px; cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500; }
+    .tab { padding: 10px 20px; cursor: pointer; border-bottom: 2px solid transparent; font-weight: 600; color: #777; transition: 0.2s; }
+    .tab:hover { color: var(--primary); }
     .tab.active { border-bottom-color: var(--primary); color: var(--primary); }
+    
+    /* CONTENT */
     .scroll-container { flex: 1 1 auto; overflow-y: auto; padding: 20px; }
-    .content { display: none; }
+    .content { display: none; animation: fadeIn 0.2s; }
     .content.active { display: block; }
-    .group { background: #fff; border: 1px solid var(--border); border-radius: 5px; padding: 15px; margin-bottom: 15px; }
-    .group h3 { margin-top: 0; font-size: 14px; color: #555; margin-bottom: 10px; }
-    .row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* GROUPS */
+    .group { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
+    .group h3 { margin-top: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: #888; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+
+    /* INPUTS & LAYOUT */
+    label { display: block; font-size: 13px; margin-bottom: 6px; font-weight: 600; color: #444; }
+    
+    .row { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; }
     .col { flex: 1; }
-    label { display: block; font-size: 12px; margin-bottom: 5px; color: #666; }
-    input[type="text"], input[type="number"], select { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; }
-    button { background: var(--primary); color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; white-space: nowrap; }
+    
+    input[type="text"], input[type="number"], select { 
+      width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; font-size: 14px; transition: border 0.2s; height: 40px;
+    }
+    input:focus, select:focus { border-color: var(--primary); outline: none; }
+    
+    button { 
+        height: 40px; /* Enforce same height as inputs */
+        background: var(--primary); color: white; border: none; padding: 0 20px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: opacity 0.2s; white-space: nowrap; 
+        display: inline-flex; align-items: center; justify-content: center;
+    }
     button:hover { opacity: 0.9; }
     button:disabled { background: #ccc; cursor: not-allowed; }
-    .status-area { flex: 0 0 auto; background: #fff; padding: 15px; border-top: 1px solid var(--border); z-index: 10; }
-    progress { width: 100%; height: 20px; margin-top: 5px; accent-color: var(--primary); }
+    button.danger { background: #e74c3c; }
+    button.secondary { background: #3498db; }
+    button.outline { background: #fff; border: 1px solid #ccc; color: #333; }
+    button.outline:hover { background: #f0f0f0; border-color: #bbb; }
+
+    /* CHECKBOX */
+    .checkbox-row { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+    input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary); }
+
+    /* FOOTER */
+    .status-area { flex: 0 0 auto; background: #fff; padding: 15px 20px; border-top: 1px solid var(--border); z-index: 10; }
+    .status-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    progress { width: 100%; height: 6px; border-radius: 3px; accent-color: var(--primary); appearance: none; }
+    progress::-webkit-progress-bar { background-color: #eee; border-radius: 3px; }
+    progress::-webkit-progress-value { background-color: var(--primary); border-radius: 3px; }
+    
+    .hint { font-size: 12px; color: #888; margin-top: -10px; margin-bottom: 15px; font-style: italic; }
+
+    /* CUSTOM MODAL */
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(2px);
+        display: none; justify-content: center; align-items: center; z-index: 1000;
+        opacity: 0; transition: opacity 0.2s;
+    }
+    .modal-overlay.open { display: flex; opacity: 1; }
+    
+    .modal-box {
+        background: white; padding: 25px; border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 350px;
+        transform: scale(0.9); transition: transform 0.2s;
+    }
+    .modal-overlay.open .modal-box { transform: scale(1); }
+    
+    .modal-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
   </style>
 </head>
 <body>
 
+  <!-- HEADER -->
   <div class="tabs">
     <div class="tab active" id="tab-basic">Basic</div>
     <div class="tab" id="tab-advanced">Advanced</div>
+    <div class="tab" id="tab-post">Post Process</div>
   </div>
 
+  <!-- CONTENT -->
   <div class="scroll-container">
+    
+    <!-- BASIC TAB -->
     <div id="basic" class="content active">
       <div class="group">
-        <h3>Input/Output Settings</h3>
-        <label>Input Path</label>
+        <h3>Input & Output</h3>
+        
+        <label>Input Folder Path</label>
         <div class="row">
-          <input type="text" id="inputPath" placeholder="C:\Path\To\Images">
+          <input type="text" id="inputPath" placeholder="Select folder containing images">
           <button id="browseIn">Browse</button>
         </div>
-        <label>Output Path (Optional)</label>
+        
+        <div class="checkbox-row">
+            <input type="checkbox" id="batchMode">
+            <label for="batchMode" style="margin:0; cursor:pointer;">Batch Mode (Input folder contains sub-folders of chapters)</label>
+        </div>
+
+        <label>Output Folder Path (Optional)</label>
         <div class="row">
-          <input type="text" id="outputPath" placeholder="Creates [Stitched] folder next to Input">
+          <input type="text" id="outputPath" placeholder="Default: [Stitched] folder created automatically">
           <button id="browseOut">Browse</button>
         </div>
       </div>
 
       <div class="group">
-        <h3>General Settings</h3>
-        <label>Output File Type</label>
-        <select id="outputType">
-          <option value=".png">.png</option>
-          <option value=".jpg">.jpg</option>
-          <option value=".webp">.webp</option>
-        </select>
-
-        <div class="row" style="margin-top:10px;">
-          <div class="col">
-            <label>Rough Output Height</label>
-            <input type="number" id="splitHeight" value="5000">
-          </div>
+        <h3>Image Settings</h3>
+        <div class="row">
+            <div class="col">
+                <label>Output Format</label>
+                <select id="outputType">
+                  <option value=".png">PNG (Lossless)</option>
+                  <option value=".jpg">JPG (Smaller)</option>
+                  <option value=".webp">WebP (Efficient)</option>
+                </select>
+            </div>
+            <div class="col">
+                <label>Split Height (px)</label>
+                <input type="number" id="splitHeight" value="5000">
+            </div>
         </div>
 
-        <label>Width Enforcement Type</label>
-        <select id="widthMode">
-          <option value="0">No Enforcement (Separate on width change)</option>
+        <label>Width Enforcement</label>
+        <select id="widthMode" style="margin-bottom: 15px;">
           <option value="1">Automatic Uniform (Match First Image)</option>
-          <option value="2">Match Minimum Width</option>
+          <option value="4">Match Maximum Width (Padding)</option>
+          <option value="2">Match Minimum Width (Crop/Resize)</option>
           <option value="3">Custom Width</option>
+          <option value="0">No Enforcement (Split on width change)</option>
         </select>
         
-        <div id="customWidthBox" style="display:none; margin-top:10px;">
+        <div id="customWidthBox" style="display:none;">
            <label>Custom Width (px)</label>
-           <input type="number" id="customWidth" value="720">
+           <div class="row"><input type="number" id="customWidth" value="720"></div>
+        </div>
+
+        <div id="paddingColorBox" style="display:none;">
+            <label>Background Fill Color</label>
+            <div class="row">
+                <select id="fillColor">
+                    <option value="0">Black</option>
+                    <option value="1">White</option>
+                </select>
+            </div>
         </div>
       </div>
     </div>
 
+    <!-- ADVANCED TAB -->
     <div id="advanced" class="content">
+      
+      <!-- FIXED LAYOUT FOR PROFILES -->
       <div class="group">
-        <h3>Detector Settings</h3>
-        <label>Detector Type</label>
-        <select disabled><option>Smart Pixel Comparison</option></select>
-        <div class="row" style="margin-top:10px;">
-          <div class="col">
-            <label>Sensitivity [1-100%]</label>
-            <input type="number" id="sensitivity" value="90" min="1" max="100">
-          </div>
-          <div class="col">
-            <label>Scan Line Step [Pixels]</label>
-            <input type="number" id="scanStep" value="5">
-          </div>
+        <h3>Configuration Profile</h3>
+        <label>Current Profile</label>
+        <div class="row">
+            <select id="profileSelect" style="flex-grow: 1;"></select>
+            <!-- Buttons now share the row with input, ensuring alignment -->
+            <button class="outline" id="btnSave" title="Update current profile settings">Save</button>
+            <button class="secondary" id="btnAdd" title="Create a new profile">Add New</button>
+            <button class="danger" id="btnDelete" title="Delete current profile">Delete</button>
         </div>
-        <label>Ignorable Horizontal Margins [Pixels]</label>
-        <input type="number" id="margin" value="5">
+        <div class="hint">Select a profile to load its settings. Click 'Save' to update with current values.</div>
+      </div>
+
+      <div class="group">
+        <h3>Detection Algorithm</h3>
+        <label>Detector Type</label>
+        <select id="detectorType" style="margin-bottom: 15px;">
+            <option value="0">Smart Pixel Comparison (Detects Panels)</option>
+            <option value="1">Direct Split (Fixed Height Cut)</option>
+        </select>
+        
+        <div id="smartSettings">
+            <div class="row">
+              <div class="col">
+                <label>Sensitivity [1-100%]</label>
+                <input type="number" id="sensitivity" value="90" min="1" max="100">
+              </div>
+              <div class="col">
+                <label>Scan Line Step [Pixels]</label>
+                <input type="number" id="scanStep" value="5">
+              </div>
+            </div>
+            <label>Ignorable Horizontal Margins [Pixels]</label>
+            <div class="row"><input type="number" id="margin" value="5"></div>
+        </div>
       </div>
     </div>
+
+    <!-- POST PROCESS TAB -->
+    <div id="post" class="content">
+      <div class="group">
+        <h3>External Command</h3>
+        <div class="checkbox-row">
+            <input type="checkbox" id="enablePost">
+            <label for="enablePost" style="margin:0; cursor:pointer;">Run post process after stitching</label>
+        </div>
+
+        <label>Application / Script Path</label>
+        <div class="row">
+            <input type="text" id="postPath" placeholder="C:\Path\To\Optimizer.exe">
+            <button id="browsePost">Browse</button>
+        </div>
+
+        <label>Arguments</label>
+        <div class="row"><input type="text" id="postArgs" placeholder="-opt {output}"></div>
+        <div class="hint">Use <b>{output}</b> as a placeholder for the final stitched folder path.</div>
+      </div>
+    </div>
+
   </div>
 
+  <!-- FOOTER -->
   <div class="status-area">
-    <div class="row">
-      <div class="col">
-        <label>Current Status</label>
-        <input type="text" id="statusText" value="Idle" readonly style="background:transparent; border:none; padding:0; font-weight:bold;">
-      </div>
-      <button id="startBtn" style="padding: 10px 30px; font-size:14px;">Start Process</button>
+    <div class="status-bar">
+        <input type="text" id="statusText" value="Ready" readonly style="background:transparent; border:none; padding:0; font-weight:600; width:70%;">
+        <button id="startBtn">Start Process</button>
     </div>
     <progress id="progressBar" value="0" max="100"></progress>
+  </div>
+
+  <!-- CUSTOM MODAL -->
+  <div id="modalOverlay" class="modal-overlay">
+      <div class="modal-box">
+          <div class="modal-title">Create New Profile</div>
+          <label>Profile Name</label>
+          <input type="text" id="newProfileName" placeholder="e.g. Manga Low Quality">
+          <div class="modal-actions">
+              <button class="outline" id="modalCancel">Cancel</button>
+              <button class="secondary" id="modalConfirm">Create</button>
+          </div>
+      </div>
   </div>
 
   <script type="module">
@@ -122,65 +254,207 @@
       const { listen } = event;
       const { open } = dialog;
 
+      // --- TABS ---
       function switchTab(tabName) {
         document.querySelectorAll('.content').forEach(d => d.classList.remove('active'));
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.getElementById(tabName).classList.add('active');
-        if(tabName === 'basic') document.getElementById('tab-basic').classList.add('active');
-        if(tabName === 'advanced') document.getElementById('tab-advanced').classList.add('active');
+        document.getElementById('tab-' + tabName).classList.add('active');
       }
-
-      document.getElementById('tab-basic').addEventListener('click', () => switchTab('basic'));
-      document.getElementById('tab-advanced').addEventListener('click', () => switchTab('advanced'));
-
-      // Width Mode display logic (Show Custom box only if value is 3)
-      document.getElementById('widthMode').addEventListener('change', (e) => {
-        document.getElementById('customWidthBox').style.display = e.target.value == '3' ? 'block' : 'none';
+      ['basic', 'advanced', 'post'].forEach(t => {
+          document.getElementById('tab-' + t).addEventListener('click', () => switchTab(t));
       });
 
-      async function handleBrowse(targetId) {
+      // --- UI DYNAMICS ---
+      document.getElementById('widthMode').addEventListener('change', (e) => {
+        const val = e.target.value;
+        document.getElementById('customWidthBox').style.display = val == '3' ? 'block' : 'none';
+        document.getElementById('paddingColorBox').style.display = (val == '4' || val == '3') ? 'block' : 'none';
+      });
+
+      document.getElementById('detectorType').addEventListener('change', (e) => {
+          document.getElementById('smartSettings').style.display = e.target.value == '1' ? 'none' : 'block';
+      });
+
+      // --- BROWSING ---
+      async function handleBrowse(targetId, isFile = false) {
         try {
-          const selected = await open({ directory: true });
+          const opts = isFile ? {} : { directory: true };
+          
+          if(isFile) {
+              // CHANGED: Allow '*' (All Files) so you can pick .ps1, .py, .rb, etc.
+              opts.filters = [{ name: 'All Files', extensions: ['*'] }];
+          }
+          
+          const selected = await open(opts);
           if(selected) document.getElementById(targetId).value = selected;
         } catch (err) { alert("Browse Error: " + err); }
       }
       document.getElementById('browseIn').addEventListener('click', () => handleBrowse('inputPath'));
       document.getElementById('browseOut').addEventListener('click', () => handleBrowse('outputPath'));
+      document.getElementById('browsePost').addEventListener('click', () => handleBrowse('postPath', true));
 
+      // --- PROFILES LOGIC ---
+      let currentProfiles = {};
+
+      function applySettings(s) {
+        document.getElementById('inputPath').value = s.input_path;
+        document.getElementById('outputPath').value = s.output_path;
+        document.getElementById('outputType').value = s.output_type;
+        document.getElementById('splitHeight').value = s.split_height;
+        document.getElementById('widthMode').value = s.width_enforce_type;
+        document.getElementById('customWidth').value = s.custom_width;
+        document.getElementById('sensitivity').value = s.sensitivity;
+        document.getElementById('scanStep').value = s.scan_step;
+        document.getElementById('margin').value = s.ignorable_margin;
+        document.getElementById('batchMode').checked = s.batch_mode;
+        document.getElementById('detectorType').value = s.detector_type;
+        document.getElementById('fillColor').value = s.fill_color;
+        document.getElementById('enablePost').checked = s.enable_post_process;
+        document.getElementById('postPath').value = s.post_process_path;
+        document.getElementById('postArgs').value = s.post_process_args;
+        
+        document.getElementById('widthMode').dispatchEvent(new Event('change'));
+        document.getElementById('detectorType').dispatchEvent(new Event('change'));
+      }
+
+      function getSettingsFromUI() {
+        return {
+          input_path: document.getElementById('inputPath').value,
+          output_path: document.getElementById('outputPath').value,
+          output_type: document.getElementById('outputType').value,
+          split_height: parseInt(document.getElementById('splitHeight').value) || 5000,
+          width_enforce_type: parseInt(document.getElementById('widthMode').value),
+          custom_width: parseInt(document.getElementById('customWidth').value) || 720,
+          sensitivity: parseInt(document.getElementById('sensitivity').value) || 90,
+          scan_step: parseInt(document.getElementById('scanStep').value) || 5,
+          ignorable_margin: parseInt(document.getElementById('margin').value) || 5,
+          batch_mode: document.getElementById('batchMode').checked,
+          detector_type: parseInt(document.getElementById('detectorType').value),
+          fill_color: parseInt(document.getElementById('fillColor').value),
+          enable_post_process: document.getElementById('enablePost').checked,
+          post_process_path: document.getElementById('postPath').value,
+          post_process_args: document.getElementById('postArgs').value
+        };
+      }
+
+      async function refreshProfiles(data) {
+        if(!data) data = await invoke('get_all_profiles');
+        currentProfiles = data.profiles;
+        
+        const sel = document.getElementById('profileSelect');
+        sel.innerHTML = '';
+        const sortedKeys = Object.keys(data.profiles).sort();
+        
+        sortedKeys.forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.innerText = name;
+            if(name === data.current_profile) opt.selected = true;
+            sel.appendChild(opt);
+        });
+
+        if(currentProfiles[data.current_profile]) {
+            applySettings(currentProfiles[data.current_profile]);
+        }
+      }
+
+      // SELECT PROFILE
+      document.getElementById('profileSelect').addEventListener('change', async (e) => {
+         const name = e.target.value;
+         await invoke('set_current_profile', { name });
+         applySettings(currentProfiles[name]);
+      });
+
+      // SAVE (UPDATE)
+      document.getElementById('btnSave').addEventListener('click', async () => {
+         const name = document.getElementById('profileSelect').value;
+         const settings = getSettingsFromUI();
+         await invoke('save_profile', { name, settings });
+         
+         // Visual feedback
+         const btn = document.getElementById('btnSave');
+         const originalText = btn.innerText;
+         btn.innerText = "Saved!";
+         setTimeout(() => btn.innerText = originalText, 1000);
+      });
+
+      // DELETE
+      document.getElementById('btnDelete').addEventListener('click', async () => {
+          const name = document.getElementById('profileSelect').value;
+          if(name === 'Default') return alert("Cannot delete Default profile");
+          if(confirm("Delete profile '" + name + "'?")) {
+              const newData = await invoke('delete_profile', { name });
+              await refreshProfiles(newData);
+          }
+      });
+
+      // --- MODAL LOGIC (ADD NEW) ---
+      const modal = document.getElementById('modalOverlay');
+      const nameInput = document.getElementById('newProfileName');
+
+      function openModal() {
+          modal.classList.add('open');
+          nameInput.value = '';
+          nameInput.focus();
+      }
+      function closeModal() {
+          modal.classList.remove('open');
+      }
+
+      document.getElementById('btnAdd').addEventListener('click', openModal);
+      document.getElementById('modalCancel').addEventListener('click', closeModal);
+
+      // Create Profile Logic
+      async function createProfile() {
+          const newName = nameInput.value.trim();
+          if(!newName) return;
+          
+          if(currentProfiles[newName]) {
+              alert("A profile with this name already exists.");
+              return;
+          }
+
+          const settings = getSettingsFromUI();
+          await invoke('save_profile', { name: newName, settings });
+          await invoke('set_current_profile', { name: newName });
+          await refreshProfiles();
+          closeModal();
+      }
+
+      document.getElementById('modalConfirm').addEventListener('click', createProfile);
+      
+      // Allow pressing Enter in modal
+      nameInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') createProfile();
+      });
+
+      // --- INITIALIZE ---
+      await refreshProfiles();
       listen('status', e => document.getElementById('statusText').value = e.payload);
       listen('progress', e => document.getElementById('progressBar').value = e.payload);
 
       document.getElementById('startBtn').addEventListener('click', async () => {
-        const settings = {
-          input_path: document.getElementById('inputPath').value,
-          output_path: document.getElementById('outputPath').value,
-          output_type: document.getElementById('outputType').value,
-          split_height: parseInt(document.getElementById('splitHeight').value),
-          width_enforce_type: parseInt(document.getElementById('widthMode').value),
-          custom_width: parseInt(document.getElementById('customWidth').value),
-          sensitivity: parseInt(document.getElementById('sensitivity').value),
-          scan_step: parseInt(document.getElementById('scanStep').value),
-          ignorable_margin: parseInt(document.getElementById('margin').value)
-        };
-
-        if(!settings.input_path) return alert("Please enter or select an input folder");
+        const settings = getSettingsFromUI();
+        if(!settings.input_path) return alert("Please select an input folder");
 
         const btn = document.getElementById('startBtn');
         btn.disabled = true;
         btn.innerText = "Running...";
+        document.getElementById('statusText').value = "Initializing...";
         
         try {
           await invoke('run_smart_stitch', { settings });
-          document.getElementById('statusText').value = "Completed Successfully!";
         } catch(e) {
           alert("Error: " + e);
-          document.getElementById('statusText').value = "Error occurred";
+          document.getElementById('statusText').value = "Error";
         } finally {
           btn.disabled = false;
           btn.innerText = "Start Process";
         }
       });
-    } catch (e) { alert("CRITICAL ERROR: Failed to load Tauri modules.\n" + e); }
+
+    } catch (e) { alert("Init Error: " + e); }
   </script>
 </body>
 </html>
