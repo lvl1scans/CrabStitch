@@ -77,13 +77,19 @@ jobs:
         with:
           targets: ${{ matrix.rust-target }}
 
+      # --- WINDOWS DEPENDENCIES ---
+      # ADDED: Install NASM for AVIF support
+      - name: Install NASM (Windows)
+        if: matrix.platform == 'windows-latest'
+        run: choco install nasm
+
       # --- LINUX DEPENDENCIES (Runs on both x64 and ARM64 Ubuntu) ---
       # Since the runner is native, apt-get installs the correct arch libraries automatically.
       - name: Install Linux Dependencies
         if: contains(matrix.platform, 'ubuntu')
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf nasm
 
       # --- FRONTEND BUILD ---
       - name: Install Frontend Dependencies

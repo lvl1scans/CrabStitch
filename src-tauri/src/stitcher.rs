@@ -1,6 +1,7 @@
 use crate::models::{StitchSettings, WidthMode};
 use anyhow::Result;
-use image::{imageops::FilterType, Rgba, RgbaImage};
+use image::{imageops::FilterType, Rgba, RgbaImage, DynamicImage};
+use psd::Psd; // Import PSD crate
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -12,27 +13,37 @@ fn split_args(args: &str) -> Vec<String> {
     let mut result = Vec::new();
     let mut current = String::new();
     let mut in_quote = false;
-
     for c in args.chars() {
         match c {
-            '"' | '\'' => {
-                in_quote = !in_quote;
-            }
+            '"' | '\'' => { in_quote = !in_quote; }
             ' ' | '\t' if !in_quote => {
-                if !current.is_empty() {
-                    result.push(current.clone());
-                    current.clear();
-                }
+                if !current.is_empty() { result.push(current.clone()); current.clear(); }
             }
-            _ => {
-                current.push(c);
-            }
+            _ => { current.push(c); }
         }
     }
-    if !current.is_empty() {
-        result.push(current);
-    }
+    if !current.is_empty() { result.push(current); }
     result
+}
+
+// --- Helper: Load Image (Handles PSD manually) ---
+fn load_image(path: &Path) -> Result<DynamicImage> {
+    let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("").to_lowercase();
+    
+    if ext == "psd" {
+        // PSD Handling: Read bytes -> Flatten -> Convert to RgbaImage -> DynamicImage
+        let bytes = fs::read(path)?;
+        let psd = Psd::from_bytes(&bytes).map_err(|e| anyhow::anyhow!("PSD Error: {}", e))?;
+        let raw_pixels = psd.rgba();
+        
+        let buffer = RgbaImage::from_raw(psd.width(), psd.height(), raw_pixels)
+            .ok_or_else(|| anyhow::anyhow!("Failed to create buffer from PSD"))?;
+            
+        Ok(DynamicImage::ImageRgba8(buffer))
+    } else {
+        // Standard handling (PNG, JPG, WEBP, AVIF, BMP)
+        image::open(path).map_err(|e| anyhow::anyhow!("Image Load Error: {}", e))
+    }
 }
 
 fn get_image_files(path: &Path) -> Vec<PathBuf> {
@@ -42,7 +53,8 @@ fn get_image_files(path: &Path) -> Vec<PathBuf> {
         .map(|entry| entry.path())
         .filter(|path| {
             let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("").to_lowercase();
-            matches!(ext.as_str(), "png" | "jpg" | "jpeg" | "webp" | "bmp" | "tiff")
+            // Added support for avif and psd here
+            matches!(ext.as_str(), "png" | "jpg" | "jpeg" | "webp" | "bmp" | "tiff" | "avif" | "psd")
         })
         .collect();
 
@@ -139,7 +151,8 @@ fn process_single_folder(
 
     fs::create_dir_all(&out_folder)?;
 
-    let first_img = image::open(&input_files[0])?;
+    // Use load_image helper
+    let first_img = load_image(&input_files[0])?;
     let width_mode = match settings.width_enforce_type {
         0 => WidthMode::NoEnforcement,
         1 => WidthMode::AutoUniform,
@@ -151,9 +164,9 @@ fn process_single_folder(
 
     let mut target_width = match width_mode {
         WidthMode::NoEnforcement | WidthMode::AutoUniform => first_img.width(),
-        WidthMode::MatchMin => input_files.iter().filter_map(|p| image::image_dimensions(p).ok()).map(|(w, _)| w).min().unwrap_or(first_img.width()),
+        WidthMode::MatchMin => input_files.iter().filter_map(|p| load_image(p).ok()).map(|i| i.width()).min().unwrap_or(first_img.width()),
         WidthMode::Custom => settings.custom_width,
-        WidthMode::MatchMax => input_files.iter().filter_map(|p| image::image_dimensions(p).ok()).map(|(w, _)| w).max().unwrap_or(first_img.width()),
+        WidthMode::MatchMax => input_files.iter().filter_map(|p| load_image(p).ok()).map(|i| i.width()).max().unwrap_or(first_img.width()),
     };
 
     let fill_pixel = if settings.fill_color == 1 { Rgba([255, 255, 255, 255]) } else { Rgba([0, 0, 0, 255]) };
@@ -167,7 +180,7 @@ fn process_single_folder(
         app.emit("status", format!("{}Processing {}/{}", prefix, idx + 1, total_files))?;
         app.emit("progress", (idx as f64 / total_files as f64) * 100.0)?;
 
-        let mut img = image::open(path)?;
+        let mut img = load_image(path)?;
         let mut current_img_width = img.width();
 
         if width_mode == WidthMode::NoEnforcement {
@@ -240,7 +253,6 @@ pub async fn run_smart_stitch(app: AppHandle, settings: StitchSettings) -> Resul
         for (i, folder) in folders_to_process.iter().enumerate() {
             let out_root = if settings.output_path.is_empty() { PathBuf::new() } else { PathBuf::from(&settings.output_path) };
             
-            // PROCESS FOLDER
             let current_output_path = match process_single_folder(&app, folder, &out_root, &settings, i, total) {
                 Ok(path) => path,
                 Err(e) => { 
@@ -249,35 +261,24 @@ pub async fn run_smart_stitch(app: AppHandle, settings: StitchSettings) -> Resul
                 }
             };
 
-            // --- RUN POST PROCESS (IMMEDIATELY AFTER EACH FOLDER) ---
             if settings.enable_post_process && !settings.post_process_path.is_empty() {
                 let _ = app.emit("status", "Running Post Process...");
-                
-                // 1. Split arguments
                 let template_args = split_args(&settings.post_process_args);
-                
-                // 2. Replace {output} with CURRENT folder's output path
                 let final_args: Vec<String> = template_args.iter()
                     .map(|arg| arg.replace("{output}", &current_output_path))
                     .collect();
 
-                let output = Command::new(&settings.post_process_path)
-                    .args(&final_args)
-                    .output();
-
+                let output = Command::new(&settings.post_process_path).args(&final_args).output();
                 match output {
                     Ok(out) => {
                          if !out.status.success() {
                              let err_msg = String::from_utf8_lossy(&out.stderr);
                              let _ = app.emit("status", format!("Post Process Failed: {}", err_msg));
                          } else {
-                             // Optional: Status update? 
-                             // Might be too fast to see if we move to next folder immediately
+                             let _ = app.emit("status", "Post Process finished.");
                          }
                     }
-                    Err(e) => {
-                         let _ = app.emit("status", format!("Could not run script: {}", e));
-                    }
+                    Err(e) => { let _ = app.emit("status", format!("Could not run script: {}", e)); }
                 }
             }
         }

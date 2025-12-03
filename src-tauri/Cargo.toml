@@ -1,6 +1,6 @@
 [package]
 name = "crabstitch"
-version = "0.2.0"
+version = "0.3.0"
 description = "A Tauri based Rust port of SmartStitch"
 authors = ["athk"]
 edition = "2021"
@@ -25,8 +25,9 @@ tauri-plugin-notification = { version = "2.0.0", features = [ "windows7-compat" 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 # image 0.24 is stable and widely used, 0.25 has API changes. Using 0.24 for stability here.
-image = "0.24" 
+image = { version = "0.24", features = ["avif", "bmp", "jpeg", "png", "webp"] }
+psd = "0.3" # Added for PSD input support
 natord = "1.0.9" # For "1.jpg, 2.jpg, 10.jpg" sorting
 walkdir = "2.4"
-rayon = "1.8" # Parallel processing
+# rayon = "1.8"  Parallel processing
 anyhow = "1.0"
