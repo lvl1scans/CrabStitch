@@ -16,48 +16,44 @@ jobs:
       matrix:
         include:
           # --- WINDOWS ---
-          # Windows x64 (Standard)
           - platform: windows-latest
             os-name: windows-x64
             rust-target: x86_64-pc-windows-msvc
             args: "" 
+            # Standard MSVC is fine for x64 assembly (uses NASM if available)
+            use-clang: false
 
-          # Windows x86 (32-bit)
-          # Note: Windows 11 dropped 32-bit support, but this binary runs on Win 10/7 (if WebView2 allows)
           - platform: windows-latest
             os-name: windows-x86
             rust-target: i686-pc-windows-msvc
             args: "--target i686-pc-windows-msvc"
+            use-clang: false
 
-          # Windows ARM64 (Snapdragon/Surface Pro X)
           - platform: windows-latest
             os-name: windows-arm64
             rust-target: aarch64-pc-windows-msvc
             args: "--target aarch64-pc-windows-msvc"
+            # ARM64 Assembly REQUIRES Clang on Windows
+            use-clang: true
 
           # --- LINUX ---
-          # Linux x64 (Standard Intel/AMD)
           - platform: ubuntu-22.04
             os-name: linux-x64
             rust-target: x86_64-unknown-linux-gnu
             args: ""
 
-          # Linux ARM64 (Raspberry Pi 4/5, Nvidia Jetson, AWS Graviton)
-          # USES NEW GITHUB ARM RUNNERS
           - platform: ubuntu-22.04-arm
             os-name: linux-arm64
             rust-target: aarch64-unknown-linux-gnu
             args: "--target aarch64-unknown-linux-gnu"
 
           # --- MACOS ---
-          # macOS Apple Silicon (M1/M2/M3)
           - platform: macos-latest
             os-name: macos-silicon
             rust-target: aarch64-apple-darwin
             args: "--target aarch64-apple-darwin"
 
-          # macOS Intel
-          - platform: macos-13 # Use macos-13 to force Intel runner
+          - platform: macos-13
             os-name: macos-intel
             rust-target: x86_64-apple-darwin
             args: "--target x86_64-apple-darwin"
@@ -71,38 +67,44 @@ jobs:
         with:
           node-version: 20
 
-      # Install Rust with the specific target for this job
       - name: Install Rust Stable
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.rust-target }}
 
       # --- WINDOWS DEPENDENCIES ---
-      # ADDED: Install NASM for AVIF support
-      - name: Install NASM (Windows)
+      - name: Install Windows Tools
         if: matrix.platform == 'windows-latest'
-        run: choco install nasm
+        run: |
+          choco install nasm
+          choco install llvm
 
-      # --- LINUX DEPENDENCIES (Runs on both x64 and ARM64 Ubuntu) ---
-      # Since the runner is native, apt-get installs the correct arch libraries automatically.
+      # --- MACOS DEPENDENCIES ---
+      - name: Install MacOS Tools
+        if: contains(matrix.platform, 'macos')
+        run: brew install nasm
+
+      # --- LINUX DEPENDENCIES ---
       - name: Install Linux Dependencies
         if: contains(matrix.platform, 'ubuntu')
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf nasm
 
-      # --- FRONTEND BUILD ---
       - name: Install Frontend Dependencies
         run: npm install
 
-      # --- TAURI BUILD ---
+      # --- BUILD COMMAND ---
+      # We conditionally set CC=clang-cl ONLY for Windows ARM builds
       - name: Build the app
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Magic Fix for Windows ARM Assembly: Use Clang instead of MSVC
+          CC: ${{ matrix.use-clang && 'clang-cl' || '' }}
         with:
           tagName: v__VERSION__ 
-          releaseName: 'SmartStitch v__VERSION__'
+          releaseName: 'CrabStitch v__VERSION__'
           releaseBody: 'See the assets to download this version and install.'
           releaseDraft: true
           prerelease: false
