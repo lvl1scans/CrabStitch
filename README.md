@@ -151,15 +151,15 @@ Of course you can use whatever version of waifu2x or process that you want, this
 2. Run command `npm install` and then `npm run tauri build` in Source Code of the repo. It'll generate platform specific local installer.
 
 ## Features to port from python to rust
-[x] Automatic Pixel Detection and Stitching logic
-[x] Direct Slice mode
-[x] Width enforcement modes
-[x] Batch Mode
-[x] Post Process command
-[x] Profiles
-[x] BMP Support
-[x] AVIF Support
-[] PSD Support
+- [x] Automatic Pixel Detection and Stitching logic
+- [x] Direct Slice mode
+- [x] Width enforcement modes
+- [x] Batch Mode
+- [x] Post Process command
+- [x] Profiles
+- [x] BMP Support
+- [x] AVIF Support
+- [] PSD Support
   - [x] PSD input
   - [] PSD output (waiting for chinedufn/psd#63 to merge)
 
