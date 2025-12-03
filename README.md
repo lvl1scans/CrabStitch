@@ -159,9 +159,9 @@ Of course you can use whatever version of waifu2x or process that you want, this
 - [x] Profiles
 - [x] BMP Support
 - [x] AVIF Support
-- [] PSD Support
+- [ ] PSD Support
   - [x] PSD input
-  - [] PSD output (waiting for chinedufn/psd#63 to merge)
+  - [ ] PSD output (waiting for chinedufn/psd#63 to merge)
 
 ## More INFO about this project
 This is a Tauri and Rust based port of original SmartStitch by MechTechnology. It was merely developed to test capabilities of Gemini 3 Pro. I had no intentions of maintaining yet another stitching tool.
